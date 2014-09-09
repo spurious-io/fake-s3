@@ -5,9 +5,10 @@ require 'fakes3/sorted_object_list'
 
 module FakeS3
   class Bucket
-    attr_accessor :name,:creation_date,:objects
+    attr_accessor :name,:creation_date,:objects,:root
 
-    def initialize(name,creation_date,objects)
+    def initialize(name,creation_date,objects,root)
+      @root = root
       @name = name
       @creation_date = creation_date
       @objects = SortedObjectList.new

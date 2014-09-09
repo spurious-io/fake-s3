@@ -112,7 +112,7 @@ module FakeS3
 #     </Owner>
 #    </Contents>
 
-    def self.append_objects_to_list_bucket_result(lbr,objects,prefix)
+    def self.append_objects_to_list_bucket_result(lbr,objects,prefix,bucket)
       return if objects.nil? or objects.size == 0
 
       if objects.index(nil)
@@ -121,29 +121,32 @@ module FakeS3
         debugger
       end
 
-      objects.each do |s3_object|
-        puts s3_object.name
+      #objects.uniq! { |o| puts o.name; o.name[/[^\/]*/] }
 
-        object_base = s3_object.name.split('/').shift
-        if File.exists? "/tmp/fake_s3/test_bucket/#{object_base}/.prefix"
+      objects.each do |s3_object|
+        current_path = prefix.nil? ? s3_object.name : s3_object.name.gsub(prefix,'')
+
+        if current_path.include? "/"
+          folder_path = prefix.nil? ? s3_object.name[/[^\/]*/] : s3_object.name[/(.*)\//, 1]
+          folder_prefix = File.open(File.join(bucket.root, bucket.name, folder_path, '.prefix')).read
           lbr.CommonPrefixes do |common_prefix|
-            common_prefix.Prefix(File.join(object_base))
+            common_prefix.Prefix("#{prefix}#{folder_prefix}")
           end
 
         else
 
-          lbr.Contents { |contents|
+          lbr.Contents do |contents|
             contents.Key(s3_object.name)
             contents.LastModified(s3_object.modified_date)
             contents.ETag("\"#{s3_object.md5}\"")
             contents.Size(s3_object.size)
             contents.StorageClass("STANDARD")
 
-            contents.Owner { |owner|
+            contents.Owner do |owner|
               owner.ID("abc")
               owner.DisplayName("You")
-            }
-          }
+            end
+          end
 
         end
       end
@@ -160,7 +163,7 @@ module FakeS3
         lbr.Marker(bucket_query.marker)
         lbr.MaxKeys(bucket_query.max_keys)
         lbr.IsTruncated(bucket_query.is_truncated?)
-        append_objects_to_list_bucket_result(lbr,bucket_query.matches,bucket_query.prefix)
+        append_objects_to_list_bucket_result(lbr,bucket_query.matches,bucket_query.prefix,bucket)
       }
       output
     end
