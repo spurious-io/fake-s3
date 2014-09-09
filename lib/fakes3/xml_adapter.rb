@@ -112,7 +112,7 @@ module FakeS3
 #     </Owner>
 #    </Contents>
 
-    def self.append_objects_to_list_bucket_result(lbr,objects)
+    def self.append_objects_to_list_bucket_result(lbr,objects,prefix)
       return if objects.nil? or objects.size == 0
 
       if objects.index(nil)
@@ -122,18 +122,30 @@ module FakeS3
       end
 
       objects.each do |s3_object|
-        lbr.Contents { |contents|
-          contents.Key(s3_object.name)
-          contents.LastModified(s3_object.modified_date)
-          contents.ETag("\"#{s3_object.md5}\"")
-          contents.Size(s3_object.size)
-          contents.StorageClass("STANDARD")
+        puts s3_object.name
 
-          contents.Owner { |owner|
-            owner.ID("abc")
-            owner.DisplayName("You")
+        object_base = s3_object.name.split('/').shift
+        if File.exists? "/tmp/fake_s3/test_bucket/#{object_base}/.prefix"
+          lbr.CommonPrefixes do |common_prefix|
+            common_prefix.Prefix(File.join(object_base))
+          end
+
+        else
+
+          lbr.Contents { |contents|
+            contents.Key(s3_object.name)
+            contents.LastModified(s3_object.modified_date)
+            contents.ETag("\"#{s3_object.md5}\"")
+            contents.Size(s3_object.size)
+            contents.StorageClass("STANDARD")
+
+            contents.Owner { |owner|
+              owner.ID("abc")
+              owner.DisplayName("You")
+            }
           }
-        }
+
+        end
       end
     end
 
@@ -148,7 +160,7 @@ module FakeS3
         lbr.Marker(bucket_query.marker)
         lbr.MaxKeys(bucket_query.max_keys)
         lbr.IsTruncated(bucket_query.is_truncated?)
-        append_objects_to_list_bucket_result(lbr,bucket_query.matches)
+        append_objects_to_list_bucket_result(lbr,bucket_query.matches,bucket_query.prefix)
       }
       output
     end
@@ -189,6 +201,6 @@ module FakeS3
         result.ETag("\"#{object.md5}\"")
       }
       output
-    end    
+    end
   end
 end

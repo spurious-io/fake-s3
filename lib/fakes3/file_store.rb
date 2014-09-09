@@ -157,6 +157,19 @@ module FakeS3
         metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
+        path_parts = object_name.split('/')
+        current_path = "#{@root}/#{bucket.name}"
+
+        path_parts.each do |path|
+          unless path == path_parts.last
+            current_path = File.join(current_path, path)
+            prefix_file = File.join(current_path, '.prefix')
+            File.open(prefix_file, 'w') do |f|
+              f << path
+            end
+          end
+        end
+
         content = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
