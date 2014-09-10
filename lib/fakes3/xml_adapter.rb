@@ -121,7 +121,7 @@ module FakeS3
         debugger
       end
 
-      #objects.uniq! { |o| puts o.name; o.name[/[^\/]*/] }
+      objects.uniq! { |o| o.name[/[^\/]*/] unless !prefix.nil? && o.name.gsub(prefix,'').count('/') == 0 }
 
       objects.each do |s3_object|
         current_path = prefix.nil? ? s3_object.name : s3_object.name.gsub(prefix,'')
